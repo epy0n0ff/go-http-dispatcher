@@ -17,7 +17,6 @@ var copyBufPool = sync.Pool{
 }
 
 type Worker struct {
-	ctx     context.Context
 	reqChan chan chan Request
 	request chan Request
 	resChan chan Response
@@ -26,13 +25,12 @@ type Worker struct {
 
 type responseAndError struct {
 	Resp *http.Response
-	Err error
+	Err  error
 }
 
 // NewDefaultWorker returns worker pointer having the default http client
-func NewDefaultWorker(ctx context.Context, reqChan chan chan Request, resChan chan Response) *Worker {
+func NewDefaultWorker(reqChan chan chan Request, resChan chan Response) *Worker {
 	return &Worker{
-		ctx,
 		reqChan,
 		make(chan Request, 1),
 		resChan,
@@ -40,7 +38,7 @@ func NewDefaultWorker(ctx context.Context, reqChan chan chan Request, resChan ch
 	}
 }
 
-func (w *Worker) Start() {
+func (w *Worker) Start(ctx context.Context) {
 	go func() {
 		for {
 			w.reqChan <- w.request
@@ -49,7 +47,11 @@ func (w *Worker) Start() {
 			case req := <-w.request:
 				resp, err := w.Do(req)
 				w.resChan <- &responseAndError{w.copyResponse(resp), err}
-				resp.Body.Close()
+				if err == nil {
+					resp.Body.Close()
+				}
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
