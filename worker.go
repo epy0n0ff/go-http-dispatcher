@@ -25,8 +25,8 @@ type Worker struct {
 }
 
 type responseAndError struct {
-	res *http.Response
-	err error
+	Resp *http.Response
+	Err error
 }
 
 // NewDefaultWorker returns worker pointer having the default http client
