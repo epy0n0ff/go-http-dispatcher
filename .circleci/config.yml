@@ -1,0 +1,9 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.8
+    working_directory: /go/src/github.com/epy0n0ff/go-http-dispatcher
+    steps:
+      - checkout
+      - run: go test -bench . -benchmem
