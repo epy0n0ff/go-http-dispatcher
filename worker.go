@@ -50,6 +50,8 @@ func (w *Worker) Start() {
 				resp, err := w.Do(req)
 				w.resChan <- &responseAndError{w.copyResponse(resp), err}
 				resp.Body.Close()
+			case <- w.ctx.Done():
+				return
 			}
 		}
 	}()

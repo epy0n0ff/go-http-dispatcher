@@ -45,6 +45,8 @@ func (d *Dispatcher) dispatch() {
 				r := <-d.job
 				req <- r
 			}(req)
+		case <- d.ctx.Done():
+			return
 		}
 	}
 }
@@ -54,10 +56,11 @@ func (d *Dispatcher) fetchResponse() {
 		for {
 			select {
 			case res := <-d.resChan:
-				if d.ResultFunc == nil {
-					return
+				if d.ResultFunc != nil {
+					d.ResultFunc(res)
 				}
-				d.ResultFunc(res)
+			case <- d.ctx.Done():
+				return
 			}
 		}
 	}()
