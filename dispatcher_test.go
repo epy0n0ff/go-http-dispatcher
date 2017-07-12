@@ -19,8 +19,8 @@ func TestRun(t *testing.T) {
 	wg := sync.WaitGroup{}
 	f := func(resp Response) {
 		go func(resp Response) {
-			t.Logf("%v", resp.err)
-			dump, _ := httputil.DumpResponse(resp.res, true)
+			t.Logf("%v", resp.Err)
+			dump, _ := httputil.DumpResponse(resp.Resp, true)
 			t.Logf("%s", string(dump))
 			wg.Done()
 		}(resp)
