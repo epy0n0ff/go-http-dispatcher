@@ -42,7 +42,7 @@ func TestRun(t *testing.T) {
 func TestRunWithCancel(t *testing.T) {
 	var echo string = "hello"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(20 * time.Second)
+		time.Sleep(10 * time.Second)
 		w.Write([]byte(echo))
 	}))
 	defer ts.Close()
@@ -64,7 +64,7 @@ func TestRunWithCancel(t *testing.T) {
 	d.ResultFunc = f
 	d.Run()
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		req, _ := http.NewRequest("GET", ts.URL, nil)
 		req = req.WithContext(ctx)
@@ -72,5 +72,4 @@ func TestRunWithCancel(t *testing.T) {
 	}
 
 	wg.Wait()
-
 }

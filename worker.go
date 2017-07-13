@@ -49,7 +49,10 @@ func (w *Worker) Start() {
 			case req := <-w.request:
 				resp, err := w.Do(req)
 				w.resChan <- &responseAndError{w.copyResponse(resp), err}
-				resp.Body.Close()
+
+				if err != nil && resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
 			case <- w.ctx.Done():
 				return
 			}
