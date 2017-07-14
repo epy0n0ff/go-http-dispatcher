@@ -9,35 +9,36 @@ type Request *http.Request
 type Response *responseAndError
 
 type Dispatcher struct {
-	ctx        context.Context
 	job        chan Request
 	reqChan    chan chan Request
 	resChan    chan Response
 	ResultFunc func(Response)
 }
 
-func NewDispatcher(ctx context.Context, workerSize int) *Dispatcher {
+func NewDispatcher(workerSize int) *Dispatcher {
 	job := make(chan Request)
 	reqPool := make(chan chan Request, workerSize)
 	resPool := make(chan Response, workerSize)
-	return &Dispatcher{ctx, job, reqPool, resPool, nil}
+	return &Dispatcher{job, reqPool, resPool, nil}
 }
 
-func (d *Dispatcher) Run() {
+func (d *Dispatcher) Run(ctx context.Context) {
 	for i := 0; i < cap(d.reqChan); i++ {
-		w := NewDefaultWorker(d.ctx, d.reqChan, d.resChan)
-		w.Start()
+		w := NewDefaultWorker(d.reqChan, d.resChan)
+		w.Start(ctx)
 	}
 
-	go d.dispatch()
-	go d.fetchResponse()
+	go d.dispatch(ctx)
+	go d.fetchResponse(ctx)
 }
 
 func (d *Dispatcher) Add(req Request) {
-	d.job <- req
+	go func() {
+		d.job <- req
+	}()
 }
 
-func (d *Dispatcher) dispatch() {
+func (d *Dispatcher) dispatch(ctx context.Context) {
 	for {
 		select {
 		case req := <-d.reqChan:
@@ -45,19 +46,22 @@ func (d *Dispatcher) dispatch() {
 				r := <-d.job
 				req <- r
 			}(req)
+		case <-ctx.Done():
+			return
 		}
 	}
 }
 
-func (d *Dispatcher) fetchResponse() {
+func (d *Dispatcher) fetchResponse(ctx context.Context) {
 	go func() {
 		for {
 			select {
 			case res := <-d.resChan:
-				if d.ResultFunc == nil {
-					return
+				if d.ResultFunc != nil {
+					d.ResultFunc(res)
 				}
-				d.ResultFunc(res)
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
