@@ -13,11 +13,15 @@ $ go get github.com/epy0n0ff/go-http-dispatcher
 
 ```go
 	wg := sync.WaitGroup{}
+	lock := sync.RWMutex{}
 	f := func(resp dispatcher.Response) {
 		go func(resp dispatcher.Response) {
+			lock.Lock()
 			t.Logf("%v", resp.Err)
 			dump, _ := httputil.DumpResponse(resp.Resp, true)
 			t.Logf("%s", string(dump))
+			lock.Unlock()
+
 			wg.Done()
 		}(resp)
 	}
@@ -32,7 +36,7 @@ $ go get github.com/epy0n0ff/go-http-dispatcher
 		// enqueue http.Request to workers
 		d.Add(req)
 	}
-    wg.Wait()
+	wg.Wait()
 ```
 
 ## License
