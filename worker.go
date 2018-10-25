@@ -38,6 +38,16 @@ func NewDefaultWorker(reqChan chan chan Request, resChan chan Response) *Worker 
 	}
 }
 
+// NewDefaultWorker returns worker pointer having the custom http client
+func NewWorkerWithHttpClient(reqChan chan chan Request, resChan chan Response, client *http.Client) *Worker {
+	return &Worker{
+		reqChan,
+		make(chan Request, 1),
+		resChan,
+		client,
+	}
+}
+
 func (w *Worker) Start(ctx context.Context) {
 	go func() {
 		for {

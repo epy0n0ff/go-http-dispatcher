@@ -32,6 +32,16 @@ func (d *Dispatcher) Run(ctx context.Context) {
 	go d.fetchResponse(ctx)
 }
 
+func (d *Dispatcher) RunWithHttpClient(ctx context.Context, client *http.Client) {
+	for i := 0; i < cap(d.reqChan); i++ {
+		w := NewWorkerWithHttpClient(d.reqChan, d.resChan, client)
+		w.Start(ctx)
+	}
+
+	go d.dispatch(ctx)
+	go d.fetchResponse(ctx)
+}
+
 func (d *Dispatcher) Add(req Request) {
 	d.job <- req
 }
