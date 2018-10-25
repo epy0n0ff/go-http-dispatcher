@@ -16,7 +16,7 @@ type Dispatcher struct {
 }
 
 func NewDispatcher(workerSize int) *Dispatcher {
-	job := make(chan Request)
+	job := make(chan Request, workerSize)
 	reqPool := make(chan chan Request, workerSize)
 	resPool := make(chan Response, workerSize)
 	return &Dispatcher{job, reqPool, resPool, nil}
@@ -33,9 +33,7 @@ func (d *Dispatcher) Run(ctx context.Context) {
 }
 
 func (d *Dispatcher) Add(req Request) {
-	go func() {
-		d.job <- req
-	}()
+	d.job <- req
 }
 
 func (d *Dispatcher) dispatch(ctx context.Context) {
