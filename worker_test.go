@@ -9,7 +9,7 @@ import (
 )
 
 func TestCopyResponse(t *testing.T) {
-	var echo string = "hello"
+	var echo = "hello"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(echo))
 	}))
