@@ -11,9 +11,10 @@ import (
 )
 
 func TestRun(t *testing.T) {
-	var echo string = "hello"
+	var echo = "hello"
 	ctx := context.Background()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
 		w.Write([]byte(echo))
 	}))
 	defer ts.Close()
@@ -32,7 +33,7 @@ func TestRun(t *testing.T) {
 	d.ResultFunc = f
 	d.Run(ctx)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		req, _ := http.NewRequest("GET", ts.URL, nil)
 		d.Add(req)
@@ -43,7 +44,7 @@ func TestRun(t *testing.T) {
 
 // WIP
 func TestRunWithCancel(t *testing.T) {
-	var echo string = "hello"
+	var echo = "hello"
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(20 * time.Second)
 		w.Write([]byte(echo))
