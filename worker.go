@@ -17,9 +17,9 @@ var copyBufPool = sync.Pool{
 }
 
 type Worker struct {
-	reqChan chan chan Request
-	request chan Request
-	resChan chan Response
+	reqPool chan chan Request
+	reqJob  chan Request
+	resPool chan Response
 	*http.Client
 }
 
@@ -29,37 +29,39 @@ type responseAndError struct {
 }
 
 // NewDefaultWorker returns worker pointer having the default http client
-func NewDefaultWorker(reqChan chan chan Request, resChan chan Response) *Worker {
+func NewDefaultWorker(reqPool chan chan Request, resPool chan Response) *Worker {
 	return &Worker{
-		reqChan,
+		reqPool,
 		make(chan Request, 1),
-		resChan,
+		resPool,
 		http.DefaultClient,
 	}
 }
 
 // NewDefaultWorker returns worker pointer having the custom http client
-func NewWorkerWithHttpClient(reqChan chan chan Request, resChan chan Response, client *http.Client) *Worker {
+func NewWorkerWithHttpClient(reqPool chan chan Request, resPool chan Response, client *http.Client) *Worker {
 	return &Worker{
-		reqChan,
+		reqPool,
 		make(chan Request, 1),
-		resChan,
+		resPool,
 		client,
 	}
 }
 
 func (w *Worker) Start(ctx context.Context) {
+	w.reqPool <- w.reqJob
+
 	go func() {
 		for {
-			w.reqChan <- w.request
-
 			select {
-			case req := <-w.request:
+			case req := <-w.reqJob:
 				resp, err := w.Do(req)
-				w.resChan <- &responseAndError{w.copyResponse(resp), err}
+				w.resPool <- &responseAndError{w.copyResponse(resp), err}
 				if err == nil {
 					resp.Body.Close()
 				}
+
+				w.reqPool <- w.reqJob
 			case <-ctx.Done():
 				return
 			}

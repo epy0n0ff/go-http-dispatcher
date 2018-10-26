@@ -2,6 +2,7 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -36,6 +37,38 @@ func TestRun(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		req, _ := http.NewRequest("GET", ts.URL, nil)
+		d.Add(req)
+	}
+
+	wg.Wait()
+}
+
+func TestRunSingleWorker(t *testing.T) {
+	var echo = "hello"
+	ctx := context.Background()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(300 * time.Millisecond)
+		w.Write([]byte(echo))
+	}))
+	defer ts.Close()
+
+	wg := sync.WaitGroup{}
+	f := func(resp Response) {
+		go func(resp Response) {
+			t.Logf("%v", resp.Err)
+			dump, _ := httputil.DumpResponse(resp.Resp, true)
+			t.Logf("%s", string(dump))
+			wg.Done()
+		}(resp)
+	}
+
+	d := NewDispatcher(1)
+	d.ResultFunc = f
+	d.Run(ctx)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%d", ts.URL, i), nil)
 		d.Add(req)
 	}
 
