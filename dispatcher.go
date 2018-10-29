@@ -9,22 +9,22 @@ type Request *http.Request
 type Response *responseAndError
 
 type Dispatcher struct {
-	job        chan Request
-	reqChan    chan chan Request
-	resChan    chan Response
+	reqJob     chan Request
+	reqPool    chan chan Request
+	resPool    chan Response
 	ResultFunc func(Response)
 }
 
 func NewDispatcher(workerSize int) *Dispatcher {
-	job := make(chan Request, workerSize)
+	reqJob := make(chan Request, workerSize)
 	reqPool := make(chan chan Request, workerSize)
 	resPool := make(chan Response, workerSize)
-	return &Dispatcher{job, reqPool, resPool, nil}
+	return &Dispatcher{reqJob, reqPool, resPool, nil}
 }
 
 func (d *Dispatcher) Run(ctx context.Context) {
-	for i := 0; i < cap(d.reqChan); i++ {
-		w := NewDefaultWorker(d.reqChan, d.resChan)
+	for i := 0; i < cap(d.reqPool); i++ {
+		w := NewDefaultWorker(d.reqPool, d.resPool)
 		w.Start(ctx)
 	}
 
@@ -33,8 +33,8 @@ func (d *Dispatcher) Run(ctx context.Context) {
 }
 
 func (d *Dispatcher) RunWithHttpClient(ctx context.Context, client *http.Client) {
-	for i := 0; i < cap(d.reqChan); i++ {
-		w := NewWorkerWithHttpClient(d.reqChan, d.resChan, client)
+	for i := 0; i < cap(d.reqPool); i++ {
+		w := NewWorkerWithHttpClient(d.reqPool, d.resPool, client)
 		w.Start(ctx)
 	}
 
@@ -43,15 +43,15 @@ func (d *Dispatcher) RunWithHttpClient(ctx context.Context, client *http.Client)
 }
 
 func (d *Dispatcher) Add(req Request) {
-	d.job <- req
+	d.reqJob <- req
 }
 
 func (d *Dispatcher) dispatch(ctx context.Context) {
 	for {
 		select {
-		case req := <-d.reqChan:
+		case req := <-d.reqPool:
 			go func(req chan Request) {
-				r := <-d.job
+				r := <-d.reqJob
 				req <- r
 			}(req)
 		case <-ctx.Done():
@@ -64,7 +64,7 @@ func (d *Dispatcher) fetchResponse(ctx context.Context) {
 	go func() {
 		for {
 			select {
-			case res := <-d.resChan:
+			case res := <-d.resPool:
 				if d.ResultFunc != nil {
 					d.ResultFunc(res)
 				}
