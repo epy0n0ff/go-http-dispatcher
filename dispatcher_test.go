@@ -21,18 +21,21 @@ func TestRun(t *testing.T) {
 	defer ts.Close()
 
 	wg := sync.WaitGroup{}
-	f := func(resp Response) {
-		go func(resp Response) {
-			t.Logf("%v", resp.Err)
-			dump, _ := httputil.DumpResponse(resp.Resp, true)
-			t.Logf("%s", string(dump))
-			wg.Done()
-		}(resp)
-	}
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.Run(ctx)
+	resPool := d.Run(ctx)
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				t.Logf("%v", resp.Err)
+				dump, _ := httputil.DumpResponse(resp.Resp, true)
+				t.Logf("%s", string(dump))
+				wg.Done()
+			}
+		}
+	}()
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -53,18 +56,20 @@ func TestRunSingleWorker(t *testing.T) {
 	defer ts.Close()
 
 	wg := sync.WaitGroup{}
-	f := func(resp Response) {
-		go func(resp Response) {
-			t.Logf("%v", resp.Err)
-			dump, _ := httputil.DumpResponse(resp.Resp, true)
-			t.Logf("%s", string(dump))
-			wg.Done()
-		}(resp)
-	}
-
 	d := NewDispatcher(1)
-	d.ResultFunc = f
-	d.Run(ctx)
+	resPool := d.Run(ctx)
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				t.Logf("%v", resp.Err)
+				dump, _ := httputil.DumpResponse(resp.Resp, true)
+				t.Logf("%s", string(dump))
+				wg.Done()
+			}
+		}
+	}()
 
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
@@ -83,23 +88,25 @@ func TestRunWithCancel(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	f := func(resp Response) {
-		go func(resp Response) {
-			if resp.Err != nil {
-				t.Logf("err:%v", resp.Err)
-			} else {
-				dump, _ := httputil.DumpResponse(resp.Resp, true)
-				t.Logf("%s", string(dump))
-			}
-		}(resp)
-	}
-
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(1*time.Second))
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.Run(ctx)
+	resPool := d.Run(ctx)
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				if resp.Err != nil {
+					t.Logf("err:%v", resp.Err)
+				} else {
+					dump, _ := httputil.DumpResponse(resp.Resp, true)
+					t.Logf("%s", string(dump))
+				}
+			}
+		}
+	}()
 
 	go func() {
 		for i := 0; i < 100; i++ {
@@ -122,23 +129,25 @@ func TestRunWithDeadline(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	f := func(resp Response) {
-		go func(resp Response) {
-			if resp.Err != nil {
-				t.Logf("err:%v", resp.Err)
-			} else {
-				dump, _ := httputil.DumpResponse(resp.Resp, true)
-				t.Logf("%s", string(dump))
-			}
-		}(resp)
-	}
-
 	ctx := context.Background()
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(1*time.Second))
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.Run(ctx)
+	resPool := d.Run(ctx)
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				if resp.Err != nil {
+					t.Logf("err:%v", resp.Err)
+				} else {
+					dump, _ := httputil.DumpResponse(resp.Resp, true)
+					t.Logf("%s", string(dump))
+				}
+			}
+		}
+	}()
 
 	go func() {
 		for i := 0; i < 100; i++ {
@@ -162,22 +171,25 @@ func TestRunWithHttpClient(t *testing.T) {
 	defer ts.Close()
 
 	wg := sync.WaitGroup{}
-	f := func(resp Response) {
-		go func(resp Response) {
-			t.Logf("%v", resp.Err)
-			dump, _ := httputil.DumpResponse(resp.Resp, true)
-			t.Logf("%s", string(dump))
-			wg.Done()
-		}(resp)
-	}
 
 	tp := http.DefaultTransport.(*http.Transport)
 	tp.MaxIdleConns = 0
 	tp.MaxIdleConnsPerHost = 100
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
+	resPool := d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				t.Logf("%v", resp.Err)
+				dump, _ := httputil.DumpResponse(resp.Resp, true)
+				t.Logf("%s", string(dump))
+				wg.Done()
+			}
+		}
+	}()
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -196,17 +208,6 @@ func TestRunWithCancelAndHttpClient(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	f := func(resp Response) {
-		go func(resp Response) {
-			if resp.Err != nil {
-				t.Logf("err:%v", resp.Err)
-			} else {
-				dump, _ := httputil.DumpResponse(resp.Resp, true)
-				t.Logf("%s", string(dump))
-			}
-		}(resp)
-	}
-
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(1*time.Second))
 
@@ -215,16 +216,20 @@ func TestRunWithCancelAndHttpClient(t *testing.T) {
 	tp.MaxIdleConnsPerHost = 100
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
-
+	resPool := d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
 	go func() {
-		for i := 0; i < 100; i++ {
-			req, _ := http.NewRequest("GET", ts.URL, nil)
-			req = req.WithContext(ctx)
-			d.Add(req)
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				if resp.Err != nil {
+					t.Logf("err:%v", resp.Err)
+				} else {
+					dump, _ := httputil.DumpResponse(resp.Resp, true)
+					t.Logf("%s", string(dump))
+				}
+			}
 		}
-
 	}()
 
 	defer cancel()
@@ -239,17 +244,6 @@ func TestRunWithDeadlineAndHttpClient(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	f := func(resp Response) {
-		go func(resp Response) {
-			if resp.Err != nil {
-				t.Logf("err:%v", resp.Err)
-			} else {
-				dump, _ := httputil.DumpResponse(resp.Resp, true)
-				t.Logf("%s", string(dump))
-			}
-		}(resp)
-	}
-
 	ctx := context.Background()
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(1*time.Second))
 
@@ -258,8 +252,28 @@ func TestRunWithDeadlineAndHttpClient(t *testing.T) {
 	tp.MaxIdleConnsPerHost = 100
 
 	d := NewDispatcher(5)
-	d.ResultFunc = f
-	d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
+	resPool := d.RunWithHttpClient(ctx, &http.Client{Transport: tp})
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+
+				if resp == nil {
+					t.Log("resp is nil")
+					continue
+				}
+
+				if resp.Err != nil {
+					t.Logf("err:%v", resp.Err)
+				} else {
+					dump, _ := httputil.DumpResponse(resp.Resp, true)
+					t.Logf("%s", string(dump))
+				}
+			}
+		}
+	}()
+
 	go func() {
 		for i := 0; i < 100; i++ {
 			req, _ := http.NewRequest("GET", ts.URL, nil)
