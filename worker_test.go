@@ -19,7 +19,7 @@ func TestCopyResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	w := NewDefaultWorker(make(chan chan Request), make(chan Response))
+	w := NewDefaultWorker(make(chan chan Request), make(chan chan Response))
 	cpy := w.copyResponse(res)
 	if cpy == nil {
 		t.Fatalf("unexpected error : %v", err)
@@ -35,7 +35,7 @@ func TestCopyResponse(t *testing.T) {
 }
 
 func BenchmarkCopyReader(b *testing.B) {
-	w := NewDefaultWorker(make(chan chan Request), make(chan Response))
+	w := NewDefaultWorker(make(chan chan Request), make(chan chan Response))
 	b.ResetTimer()
 	r := bytes.NewBufferString("hogehoge")
 	for i := 0; i < b.N; i++ {
@@ -53,7 +53,7 @@ func BenchmarkCopyResponse(b *testing.B) {
 	if err != nil {
 		b.Fatalf("unexpected error: %v", err)
 	}
-	w := NewDefaultWorker(make(chan chan Request), make(chan Response))
+	w := NewDefaultWorker(make(chan chan Request), make(chan chan Response))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		w.copyResponse(res)

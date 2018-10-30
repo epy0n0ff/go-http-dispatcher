@@ -14,21 +14,23 @@ $ go get github.com/epy0n0ff/go-http-dispatcher
 ```go
 	wg := sync.WaitGroup{}
 	lock := sync.RWMutex{}
-	f := func(resp dispatcher.Response) {
-		go func(resp dispatcher.Response) {
-			lock.Lock()
-			t.Logf("%v", resp.Err)
-			dump, _ := httputil.DumpResponse(resp.Resp, true)
-			t.Logf("%s", string(dump))
-			lock.Unlock()
 
-			wg.Done()
-		}(resp)
-	}
 	// create five worker threads
 	d := dispatcher.NewDispatcher(context.Background(), 5)
-	d.ResultFunc = f
-	d.Run()
+
+	resPool := d.Run()
+	go func() {
+		for {
+			select {
+			case res := <-resPool:
+				resp := <-res
+				t.Logf("%v", resp.Err)
+				dump, _ := httputil.DumpResponse(resp.Resp, true)
+				t.Logf("%s", string(dump))
+				wg.Done()
+			}
+		}
+	}()
 
 	for i := 0; i < 10000; i++ {
 		wg.Add(1)
