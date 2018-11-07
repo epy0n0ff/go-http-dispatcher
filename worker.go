@@ -67,6 +67,7 @@ func (w *Worker) Start(ctx context.Context) {
 				w.reqPool <- w.reqJob
 			case <-ctx.Done():
 				return
+			default:
 			}
 		}
 	}()

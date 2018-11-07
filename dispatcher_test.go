@@ -33,6 +33,7 @@ func TestRun(t *testing.T) {
 				dump, _ := httputil.DumpResponse(resp.Resp, true)
 				t.Logf("%s", string(dump))
 				wg.Done()
+			default:
 			}
 		}
 	}()
@@ -67,6 +68,7 @@ func TestRunSingleWorker(t *testing.T) {
 				dump, _ := httputil.DumpResponse(resp.Resp, true)
 				t.Logf("%s", string(dump))
 				wg.Done()
+			default:
 			}
 		}
 	}()
@@ -104,6 +106,7 @@ func TestRunWithCancel(t *testing.T) {
 					dump, _ := httputil.DumpResponse(resp.Resp, true)
 					t.Logf("%s", string(dump))
 				}
+			default:
 			}
 		}
 	}()
@@ -145,6 +148,7 @@ func TestRunWithDeadline(t *testing.T) {
 					dump, _ := httputil.DumpResponse(resp.Resp, true)
 					t.Logf("%s", string(dump))
 				}
+			default:
 			}
 		}
 	}()
@@ -187,6 +191,7 @@ func TestRunWithHttpClient(t *testing.T) {
 				dump, _ := httputil.DumpResponse(resp.Resp, true)
 				t.Logf("%s", string(dump))
 				wg.Done()
+			default:
 			}
 		}
 	}()
@@ -228,6 +233,7 @@ func TestRunWithCancelAndHttpClient(t *testing.T) {
 					dump, _ := httputil.DumpResponse(resp.Resp, true)
 					t.Logf("%s", string(dump))
 				}
+			default:
 			}
 		}
 	}()
@@ -270,6 +276,7 @@ func TestRunWithDeadlineAndHttpClient(t *testing.T) {
 					dump, _ := httputil.DumpResponse(resp.Resp, true)
 					t.Logf("%s", string(dump))
 				}
+			default:
 			}
 		}
 	}()
