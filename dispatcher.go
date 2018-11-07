@@ -54,6 +54,7 @@ func (d *Dispatcher) dispatch(ctx context.Context) {
 			req <- <-d.reqJob
 		case <-ctx.Done():
 			return
+		default:
 		}
 	}
 }
